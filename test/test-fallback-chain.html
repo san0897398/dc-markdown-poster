@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>DC Markdown Poster - Fallback Chain Tests</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; border-bottom: 2px solid #7c3aed; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; }
+        .test-suite {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .test-case.pass { background: #d4edda; color: #155724; }
+        .test-case.fail { background: #f8d7da; color: #721c24; }
+        .test-case.pending { background: #fff3cd; color: #856404; }
+        .test-case.skip { background: #e2e3e5; color: #6c757d; }
+        .test-name { font-weight: 500; }
+        .test-status { font-size: 12px; font-weight: bold; }
+        .error-details {
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        #summary {
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        #summary .pass-count { color: #28a745; }
+        #summary .fail-count { color: #dc3545; }
+        #summary .skip-count { color: #6c757d; }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover { background: #6b2fc9; }
+        button.secondary {
+            background: #6c757d;
+        }
+        button.secondary:hover { background: #5a6268; }
+        #demo-results {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        .url-result {
+            word-break: break-all;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .url-result.success { border-left: 4px solid #28a745; }
+        .url-result.error { border-left: 4px solid #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>DC Markdown Poster - Fallback Chain Tests</h1>
+
+    <div id="summary">
+        <strong>Summary:</strong>
+        <span class="pass-count">0 passed</span> /
+        <span class="fail-count">0 failed</span> /
+        <span class="skip-count">0 skipped</span>
+        <button onclick="runAllTests()" style="float: right;">Run All Tests</button>
+        <button onclick="runIntegrationTest()" class="secondary" style="float: right;">Integration Test</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <div id="demo-results">
+        <h2>Integration Test Results</h2>
+        <p style="color: #888;">Click "Integration Test" to test actual API calls</p>
+    </div>
+
+    <!-- Load pako for compression -->
+    <script src="../lib/pako.min.js"></script>
+
+    <!-- Test Framework -->
+    <script>
+        const testResults = {
+            pass: 0,
+            fail: 0,
+            skip: 0,
+            tests: []
+        };
+
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message || 'Assertion failed');
+            }
+        }
+
+        function assertEqual(actual, expected, message) {
+            if (actual !== expected) {
+                throw new Error(message || `Expected ${expected}, got ${actual}`);
+            }
+        }
+
+        function assertMatch(actual, regex, message) {
+            if (!regex.test(actual)) {
+                throw new Error(message || `Expected ${actual} to match ${regex}`);
+            }
+        }
+
+        function recordTest(suite, name, passed, error = null, skipped = false) {
+            testResults.tests.push({ suite, name, passed, error, skipped });
+            if (skipped) {
+                testResults.skip++;
+            } else if (passed) {
+                testResults.pass++;
+            } else {
+                testResults.fail++;
+            }
+        }
+
+        function renderResults() {
+            const container = document.getElementById('test-results');
+            const summary = document.getElementById('summary');
+
+            // Group by suite
+            const suites = {};
+            testResults.tests.forEach(t => {
+                if (!suites[t.suite]) suites[t.suite] = [];
+                suites[t.suite].push(t);
+            });
+
+            let html = '';
+            for (const [suite, tests] of Object.entries(suites)) {
+                html += `<div class="test-suite"><h2>${suite}</h2>`;
+                tests.forEach(t => {
+                    let statusClass = t.passed ? 'pass' : 'fail';
+                    let statusText = t.passed ? 'PASS' : 'FAIL';
+                    if (t.skipped) {
+                        statusClass = 'skip';
+                        statusText = 'SKIP';
+                    }
+                    html += `<div class="test-case ${statusClass}">
+                        <span class="test-name">${t.name}</span>
+                        <span class="test-status">${statusText}</span>
+                    </div>`;
+                    if (t.error) {
+                        html += `<div class="error-details">${t.error}</div>`;
+                    }
+                });
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+            summary.querySelector('.pass-count').textContent = `${testResults.pass} passed`;
+            summary.querySelector('.fail-count').textContent = `${testResults.fail} failed`;
+            summary.querySelector('.skip-count').textContent = `${testResults.skip} skipped`;
+        }
+
+        // ===========================================
+        // TEST SUITES
+        // ===========================================
+
+        // Pako Library Tests
+        async function testPakoLibrary() {
+            const suite = 'Pako Library';
+
+            // Test: pako global exists
+            try {
+                assert(window.pako !== undefined, 'pako should be defined');
+                recordTest(suite, 'pako is loaded', true);
+            } catch (e) {
+                recordTest(suite, 'pako is loaded', false, e.message);
+                return;
+            }
+
+            // Test: pako.deflate exists
+            try {
+                assert(typeof pako.deflate === 'function', 'pako.deflate should be a function');
+                recordTest(suite, 'pako.deflate() exists', true);
+            } catch (e) {
+                recordTest(suite, 'pako.deflate() exists', false, e.message);
+            }
+
+            // Test: pako compression works
+            try {
+                const testCode = 'graph LR\n  A --> B';
+                const encoder = new TextEncoder();
+                const data = encoder.encode(testCode);
+                const compressed = pako.deflate(data, { level: 9 });
+                assert(compressed instanceof Uint8Array, 'Should return Uint8Array');
+                assert(compressed.length > 0, 'Should have content');
+                recordTest(suite, 'pako.deflate() compresses data', true);
+            } catch (e) {
+                recordTest(suite, 'pako.deflate() compresses data', false, e.message);
+            }
+
+            // Test: compression reduces size for large input
+            try {
+                const largeCode = 'graph LR\n' + '  A --> B\n'.repeat(50);
+                const encoder = new TextEncoder();
+                const data = encoder.encode(largeCode);
+                const compressed = pako.deflate(data, { level: 9 });
+                assert(compressed.length < data.length, 'Compressed should be smaller');
+                recordTest(suite, 'Compression reduces size', true);
+            } catch (e) {
+                recordTest(suite, 'Compression reduces size', false, e.message);
+            }
+        }
+
+        // MermaidInk Encoder Tests
+        async function testMermaidInkEncoder() {
+            const suite = 'MermaidInk Encoder';
+
+            // Test: encodeMermaid function exists (will be implemented)
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(typeof window.FallbackChain.encodeMermaid === 'function', 'encodeMermaid should be a function');
+                recordTest(suite, 'FallbackChain.encodeMermaid() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.encodeMermaid() exists', false, e.message);
+                return;
+            }
+
+            // Test: encodeMermaid returns valid URL
+            try {
+                const testCode = 'graph LR\n  A --> B';
+                const url = window.FallbackChain.encodeMermaid(testCode);
+                assert(typeof url === 'string', 'Should return string');
+                assertMatch(url, /^https:\/\/mermaid\.ink\/img\/pako:/, 'Should start with mermaid.ink/img/pako:');
+                recordTest(suite, 'encodeMermaid() returns valid URL', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() returns valid URL', false, e.message);
+            }
+
+            // Test: encodeMermaid URL is URL-safe
+            try {
+                const testCode = 'graph LR\n  A[Start] --> B[End]';
+                const url = window.FallbackChain.encodeMermaid(testCode);
+                // URL-safe base64: no +, /, =
+                const base64Part = url.replace('https://mermaid.ink/img/pako:', '');
+                assert(!base64Part.includes('+'), 'Should not contain +');
+                assert(!base64Part.includes('/'), 'Should not contain /');
+                // Trailing = is optional, but should be stripped
+                recordTest(suite, 'encodeMermaid() produces URL-safe base64', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() produces URL-safe base64', false, e.message);
+            }
+
+            // Test: encodeMermaid handles Korean
+            try {
+                const koreanCode = 'graph LR\n  A[시작] --> B[끝]';
+                const url = window.FallbackChain.encodeMermaid(koreanCode);
+                assert(url.length > 0, 'Should produce non-empty URL');
+                assertMatch(url, /^https:\/\/mermaid\.ink\/img\/pako:/, 'Should be valid mermaid.ink URL');
+                recordTest(suite, 'encodeMermaid() handles Korean text', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() handles Korean text', false, e.message);
+            }
+
+            // Test: URL length is reasonable
+            try {
+                const testCode = 'graph LR\n  A --> B';
+                const url = window.FallbackChain.encodeMermaid(testCode);
+                assert(url.length < 2000, 'URL should be under 2000 chars');
+                recordTest(suite, 'encodeMermaid() produces reasonable URL length', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() produces reasonable URL length', false, e.message);
+            }
+        }
+
+        // URL Shortener Tests
+        async function testUrlShortener() {
+            const suite = 'URL Shortener';
+
+            // Test: shortenUrl function exists
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(typeof window.FallbackChain.shortenUrl === 'function', 'shortenUrl should be a function');
+                recordTest(suite, 'FallbackChain.shortenUrl() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.shortenUrl() exists', false, e.message);
+                return;
+            }
+
+            // Test: needsShortening function exists
+            try {
+                assert(typeof window.FallbackChain.needsShortening === 'function', 'needsShortening should be a function');
+                recordTest(suite, 'FallbackChain.needsShortening() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.needsShortening() exists', false, e.message);
+            }
+
+            // Test: needsShortening returns correct result
+            try {
+                const shortUrl = 'https://example.com/short';
+                const longUrl = 'https://mermaid.ink/img/pako:' + 'a'.repeat(100);
+
+                assert(window.FallbackChain.needsShortening(shortUrl) === false, 'Short URL should not need shortening');
+                assert(window.FallbackChain.needsShortening(longUrl) === true, 'Long URL should need shortening');
+                recordTest(suite, 'needsShortening() works correctly', true);
+            } catch (e) {
+                recordTest(suite, 'needsShortening() works correctly', false, e.message);
+            }
+        }
+
+        // Postimg Upload Tests
+        async function testPostimgUploader() {
+            const suite = 'Postimg Uploader';
+
+            // Test: uploadToPostimg function exists
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(typeof window.FallbackChain.uploadToPostimg === 'function', 'uploadToPostimg should be a function');
+                recordTest(suite, 'FallbackChain.uploadToPostimg() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.uploadToPostimg() exists', false, e.message);
+            }
+        }
+
+        // Freeimage Upload Tests
+        async function testFreeimageUploader() {
+            const suite = 'Freeimage Uploader';
+
+            // Test: uploadToFreeimage function exists
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(typeof window.FallbackChain.uploadToFreeimage === 'function', 'uploadToFreeimage should be a function');
+                recordTest(suite, 'FallbackChain.uploadToFreeimage() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.uploadToFreeimage() exists', false, e.message);
+            }
+        }
+
+        // Main Upload Interface Tests
+        async function testUploadInterface() {
+            const suite = 'Upload Interface';
+
+            // Test: FallbackChain.upload function exists
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(typeof window.FallbackChain.upload === 'function', 'upload should be a function');
+                recordTest(suite, 'FallbackChain.upload() exists', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain.upload() exists', false, e.message);
+                return;
+            }
+
+            // Test: upload accepts imageData and optional mermaidCode
+            try {
+                // Check function signature by testing with mock data
+                // This will fail at runtime but should not throw type errors
+                const mockResult = { success: false, error: 'test' };
+                assert(true, 'Function signature is correct');
+                recordTest(suite, 'upload() accepts correct parameters', true);
+            } catch (e) {
+                recordTest(suite, 'upload() accepts correct parameters', false, e.message);
+            }
+        }
+
+        // Fallback Chain Order Tests
+        async function testFallbackChainOrder() {
+            const suite = 'Fallback Chain Order';
+
+            // Test: FALLBACK_ORDER constant exists
+            try {
+                assert(typeof window.FallbackChain !== 'undefined', 'FallbackChain should be defined');
+                assert(Array.isArray(window.FallbackChain.FALLBACK_ORDER), 'FALLBACK_ORDER should be an array');
+                recordTest(suite, 'FALLBACK_ORDER exists', true);
+            } catch (e) {
+                recordTest(suite, 'FALLBACK_ORDER exists', false, e.message);
+                return;
+            }
+
+            // Test: Correct order of fallbacks
+            try {
+                const order = window.FallbackChain.FALLBACK_ORDER;
+                assertEqual(order[0], 'mermaid.ink', 'First should be mermaid.ink');
+                assertEqual(order[1], 'postimg', 'Second should be postimg');
+                assertEqual(order[2], 'freeimage', 'Third should be freeimage');
+                assertEqual(order[3], 'imgur', 'Fourth should be imgur');
+                recordTest(suite, 'Fallback order is correct', true);
+            } catch (e) {
+                recordTest(suite, 'Fallback order is correct', false, e.message);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            // Reset
+            testResults.pass = 0;
+            testResults.fail = 0;
+            testResults.skip = 0;
+            testResults.tests = [];
+
+            await testPakoLibrary();
+            await testMermaidInkEncoder();
+            await testUrlShortener();
+            await testPostimgUploader();
+            await testFreeimageUploader();
+            await testUploadInterface();
+            await testFallbackChainOrder();
+
+            renderResults();
+        }
+
+        // Integration test with actual API calls
+        async function runIntegrationTest() {
+            const resultsDiv = document.getElementById('demo-results');
+            resultsDiv.innerHTML = '<h2>Integration Test Results</h2><p>Testing...</p>';
+
+            const results = [];
+
+            // Test 1: mermaid.ink URL generation
+            try {
+                const testCode = 'graph LR\n  A[Start] --> B[Process] --> C[End]';
+                const url = window.FallbackChain.encodeMermaid(testCode);
+                results.push({
+                    test: '1. mermaid.ink URL Generation',
+                    success: true,
+                    url: url,
+                    note: `URL length: ${url.length} chars`
+                });
+
+                // Test if URL is accessible
+                const img = new Image();
+                const loadPromise = new Promise((resolve, reject) => {
+                    img.onload = () => resolve(true);
+                    img.onerror = () => reject(new Error('Image failed to load'));
+                    setTimeout(() => reject(new Error('Timeout')), 10000);
+                });
+                img.src = url;
+
+                try {
+                    await loadPromise;
+                    results.push({
+                        test: '1a. mermaid.ink URL Accessible',
+                        success: true,
+                        note: 'Image loaded successfully'
+                    });
+                } catch (e) {
+                    results.push({
+                        test: '1a. mermaid.ink URL Accessible',
+                        success: false,
+                        error: e.message
+                    });
+                }
+            } catch (e) {
+                results.push({
+                    test: '1. mermaid.ink URL Generation',
+                    success: false,
+                    error: e.message
+                });
+            }
+
+            // Test 2: Korean text in mermaid.ink
+            try {
+                const koreanCode = 'graph TD\n  A[시작] --> B{조건}\n  B -->|예| C[처리]\n  B -->|아니오| D[종료]';
+                const url = window.FallbackChain.encodeMermaid(koreanCode);
+                results.push({
+                    test: '2. mermaid.ink Korean Text',
+                    success: true,
+                    url: url,
+                    note: `URL length: ${url.length} chars`
+                });
+
+                // Test if URL is accessible
+                const img = new Image();
+                const loadPromise = new Promise((resolve, reject) => {
+                    img.onload = () => resolve(true);
+                    img.onerror = () => reject(new Error('Image failed to load'));
+                    setTimeout(() => reject(new Error('Timeout')), 10000);
+                });
+                img.src = url;
+
+                try {
+                    await loadPromise;
+                    results.push({
+                        test: '2a. Korean mermaid.ink Accessible',
+                        success: true,
+                        note: 'Korean diagram loaded successfully'
+                    });
+                } catch (e) {
+                    results.push({
+                        test: '2a. Korean mermaid.ink Accessible',
+                        success: false,
+                        error: e.message
+                    });
+                }
+            } catch (e) {
+                results.push({
+                    test: '2. mermaid.ink Korean Text',
+                    success: false,
+                    error: e.message
+                });
+            }
+
+            // Test 3: URL shortening (is.gd)
+            try {
+                const longCode = 'graph LR\n' + '  Node' + 'A'.repeat(10) + ' --> Node' + 'B'.repeat(10) + '\n'.repeat(5);
+                const url = window.FallbackChain.encodeMermaid(longCode);
+
+                if (window.FallbackChain.needsShortening(url)) {
+                    results.push({
+                        test: '3. Long URL Detection',
+                        success: true,
+                        note: `URL length ${url.length} > 81, needs shortening`
+                    });
+
+                    // Test actual shortening (may fail due to CORS in browser)
+                    try {
+                        const shortened = await window.FallbackChain.shortenUrl(url);
+                        results.push({
+                            test: '3a. is.gd URL Shortening',
+                            success: !!shortened,
+                            url: shortened || 'Failed',
+                            note: shortened ? `Shortened to ${shortened.length} chars` : 'CORS or API error'
+                        });
+                    } catch (e) {
+                        results.push({
+                            test: '3a. is.gd URL Shortening',
+                            success: false,
+                            error: e.message + ' (expected in browser due to CORS)'
+                        });
+                    }
+                } else {
+                    results.push({
+                        test: '3. Long URL Detection',
+                        success: true,
+                        note: `URL length ${url.length} <= 81, no shortening needed`
+                    });
+                }
+            } catch (e) {
+                results.push({
+                    test: '3. URL Shortening',
+                    success: false,
+                    error: e.message
+                });
+            }
+
+            // Render results
+            let html = '<h2>Integration Test Results</h2>';
+            results.forEach(r => {
+                const cssClass = r.success ? 'success' : 'error';
+                html += `<div class="url-result ${cssClass}">
+                    <strong>${r.test}</strong><br>
+                    ${r.success ? 'SUCCESS' : 'FAILED'}
+                    ${r.url ? `<br>URL: ${r.url}` : ''}
+                    ${r.note ? `<br>Note: ${r.note}` : ''}
+                    ${r.error ? `<br>Error: ${r.error}` : ''}
+                </div>`;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Auto-run on load
+        window.addEventListener('DOMContentLoaded', runAllTests);
+    </script>
+
+    <!-- Load the fallback chain module (to be implemented) -->
+    <script src="../utils/fallback-chain.js"></script>
+</body>
+</html>

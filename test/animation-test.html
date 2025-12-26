@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DC 호환 시각 효과 테스트</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #e4e4e4;
+            padding: 20px;
+        }
+        h1 { text-align: center; margin-bottom: 10px; color: #00d4ff; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 20px; font-size: 14px; }
+        h2 { margin: 20px 0 10px; color: #7c3aed; font-size: 16px; }
+        .test-section {
+            background: #16213e;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .copy-btn {
+            background: linear-gradient(90deg, #00d4ff, #7c3aed);
+            border: none;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 8px;
+            font-size: 11px;
+        }
+        .copy-btn:hover { opacity: 0.9; }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            margin-left: 8px;
+        }
+        .badge.dc { background: #00ff88; color: #000; }
+        .result-box {
+            background: #0a0a0a;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>✨ DC 호환 시각 효과</h1>
+    <p class="subtitle">인라인 스타일만 사용 (@keyframes 없음) - DCInside 100% 호환</p>
+
+    <div id="output"></div>
+
+    <script src="../lib/pako.min.js"></script>
+    <script src="../utils/mermaid-ascii.js"></script>
+    <script>
+        const testCode = `graph LR
+    A[시작] --> B[처리]
+    B --> C{조건?}
+    C -->|Yes| D[완료]
+    C -->|No| B`;
+
+        const effects = [
+            { name: 'none', label: '기본', theme: 'terminal', desc: '효과 없음' },
+            { name: 'matrix', label: '🟢 매트릭스', theme: 'dark', desc: '녹색 네온 + 스캔라인' },
+            { name: 'cyberpunk', label: '🔵 사이버펑크', theme: 'cyber', desc: '청록 네온 + 스캔라인' },
+            { name: 'retroPink', label: '💗 레트로 핑크', theme: 'purple', desc: '핑크 네온 + 스캔라인' },
+            { name: 'scanline', label: '📺 스캔라인', theme: 'terminal', desc: 'CRT 모니터 효과' },
+            { name: 'neonGreen', label: '💚 네온 그린', theme: 'dark', desc: '강한 녹색 글로우' },
+            { name: 'neonCyan', label: '💙 네온 시안', theme: 'cyber', desc: '청록 글로우' },
+            { name: 'neonPink', label: '💜 네온 핑크', theme: 'purple', desc: '핑크 글로우' },
+            { name: 'floating', label: '🎈 플로팅', theme: 'dark', desc: '떠있는 그림자 효과' }
+        ];
+
+        const output = document.getElementById('output');
+
+        effects.forEach(({ name, label, theme, desc }) => {
+            const html = MermaidASCII.renderForDC(testCode, theme, 'unicode', name);
+
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `
+                <h2>${label} <span class="badge dc">DC 호환</span></h2>
+                <p style="font-size: 12px; color: #888; margin-bottom: 8px;">${desc}</p>
+                <div class="result-box">${html}</div>
+                <button class="copy-btn" onclick="copyHTML(this, \`${encodeURIComponent(html)}\`)">
+                    📋 HTML 복사
+                </button>
+                <span class="copy-status" style="margin-left: 8px; font-size: 11px; color: #888;"></span>
+            `;
+            output.appendChild(section);
+        });
+
+        function copyHTML(btn, encodedHtml) {
+            const html = decodeURIComponent(encodedHtml);
+            navigator.clipboard.writeText(html).then(() => {
+                const status = btn.nextElementSibling;
+                status.textContent = '✓ 복사됨!';
+                status.style.color = '#00ff88';
+                setTimeout(() => { status.textContent = ''; }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

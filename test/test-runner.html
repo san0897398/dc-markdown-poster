@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>DC Markdown Poster - Test Runner</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; border-bottom: 2px solid #7c3aed; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; }
+        .test-suite {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-case {
+            padding: 10px;
+            margin: 8px 0;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .test-case.pass { background: #d4edda; color: #155724; }
+        .test-case.fail { background: #f8d7da; color: #721c24; }
+        .test-case.pending { background: #fff3cd; color: #856404; }
+        .test-name { font-weight: 500; }
+        .test-status { font-size: 12px; font-weight: bold; }
+        .error-details {
+            background: #f8d7da;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-size: 12px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        #summary {
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        #summary .pass-count { color: #28a745; }
+        #summary .fail-count { color: #dc3545; }
+        button {
+            background: #7c3aed;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover { background: #6b2fc9; }
+        #preview-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        #mermaid-preview {
+            margin-top: 10px;
+            text-align: center;
+        }
+        #mermaid-preview img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .url-result {
+            word-break: break-all;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .url-result.success { border-left: 4px solid #28a745; }
+        .url-result.error { border-left: 4px solid #dc3545; }
+    </style>
+</head>
+<body>
+    <h1>DC Markdown Poster - Unit Tests (v2.1)</h1>
+
+    <div id="summary">
+        <strong>Summary:</strong>
+        <span class="pass-count">0 passed</span> /
+        <span class="fail-count">0 failed</span>
+        <button onclick="runAllTests()" style="float: right;">Run All Tests</button>
+        <button onclick="runMermaidDemo()" style="float: right;">Mermaid Demo</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <div id="preview-container">
+        <h2>Mermaid Preview</h2>
+        <div id="mermaid-preview">
+            <p style="color: #888;">Click "Mermaid Demo" to test rendering</p>
+        </div>
+    </div>
+
+    <!-- Load pako for compression -->
+    <script src="../lib/pako.min.js"></script>
+
+    <!-- Load ASCII renderer (mermaid.min.js 제거됨) -->
+    <script src="../utils/mermaid-ascii.js"></script>
+    <script src="../utils/mermaid-handler.js"></script>
+    <script src="../utils/converter.js"></script>
+
+    <!-- Test Framework -->
+    <script>
+        const testResults = {
+            pass: 0,
+            fail: 0,
+            tests: []
+        };
+
+        function assert(condition, message) {
+            if (!condition) {
+                throw new Error(message || 'Assertion failed');
+            }
+        }
+
+        function assertEqual(actual, expected, message) {
+            if (actual !== expected) {
+                throw new Error(message || `Expected ${expected}, got ${actual}`);
+            }
+        }
+
+        function assertNotThrows(fn, message) {
+            try {
+                fn();
+            } catch (e) {
+                throw new Error(message || `Function threw unexpectedly: ${e.message}`);
+            }
+        }
+
+        async function assertNotThrowsAsync(fn, message) {
+            try {
+                await fn();
+            } catch (e) {
+                throw new Error(message || `Async function threw unexpectedly: ${e.message}`);
+            }
+        }
+
+        function recordTest(suite, name, passed, error = null) {
+            testResults.tests.push({ suite, name, passed, error });
+            if (passed) {
+                testResults.pass++;
+            } else {
+                testResults.fail++;
+            }
+        }
+
+        function renderResults() {
+            const container = document.getElementById('test-results');
+            const summary = document.getElementById('summary');
+
+            // Group by suite
+            const suites = {};
+            testResults.tests.forEach(t => {
+                if (!suites[t.suite]) suites[t.suite] = [];
+                suites[t.suite].push(t);
+            });
+
+            let html = '';
+            for (const [suite, tests] of Object.entries(suites)) {
+                html += `<div class="test-suite"><h2>${suite}</h2>`;
+                tests.forEach(t => {
+                    const statusClass = t.passed ? 'pass' : 'fail';
+                    const statusText = t.passed ? 'PASS' : 'FAIL';
+                    html += `<div class="test-case ${statusClass}">
+                        <span class="test-name">${t.name}</span>
+                        <span class="test-status">${statusText}</span>
+                    </div>`;
+                    if (t.error) {
+                        html += `<div class="error-details">${t.error}</div>`;
+                    }
+                });
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+            summary.querySelector('.pass-count').textContent = `${testResults.pass} passed`;
+            summary.querySelector('.fail-count').textContent = `${testResults.fail} failed`;
+        }
+
+        // ===========================================
+        // TEST SUITES
+        // ===========================================
+
+        // Pako Library Tests
+        async function testPakoLibrary() {
+            const suite = 'Pako Library';
+
+            // Test: pako global exists
+            try {
+                assert(window.pako !== undefined, 'pako should be defined');
+                recordTest(suite, 'pako is loaded', true);
+            } catch (e) {
+                recordTest(suite, 'pako is loaded', false, e.message);
+                return;
+            }
+
+            // Test: pako.deflate exists
+            try {
+                assert(typeof pako.deflate === 'function', 'pako.deflate should be a function');
+                recordTest(suite, 'pako.deflate() exists', true);
+            } catch (e) {
+                recordTest(suite, 'pako.deflate() exists', false, e.message);
+            }
+
+            // Test: pako compression works
+            try {
+                const testCode = 'graph LR\n  A --> B';
+                const encoder = new TextEncoder();
+                const data = encoder.encode(testCode);
+                const compressed = pako.deflate(data, { level: 9 });
+                assert(compressed instanceof Uint8Array, 'Should return Uint8Array');
+                assert(compressed.length > 0, 'Should have content');
+                recordTest(suite, 'pako.deflate() compresses data', true);
+            } catch (e) {
+                recordTest(suite, 'pako.deflate() compresses data', false, e.message);
+            }
+        }
+
+        // FallbackChain Tests
+        async function testFallbackChain() {
+            const suite = 'FallbackChain';
+
+            // Test: FallbackChain exists
+            try {
+                assert(window.FallbackChain !== undefined, 'FallbackChain should be defined');
+                recordTest(suite, 'FallbackChain is defined', true);
+            } catch (e) {
+                recordTest(suite, 'FallbackChain is defined', false, e.message);
+                return;
+            }
+
+            // Test: FALLBACK_ORDER constant
+            try {
+                assert(Array.isArray(FallbackChain.FALLBACK_ORDER), 'FALLBACK_ORDER should be an array');
+                assertEqual(FallbackChain.FALLBACK_ORDER[0], 'mermaid.ink', 'First should be mermaid.ink');
+                assertEqual(FallbackChain.FALLBACK_ORDER[1], 'postimg', 'Second should be postimg');
+                assertEqual(FallbackChain.FALLBACK_ORDER[2], 'freeimage', 'Third should be freeimage');
+                assertEqual(FallbackChain.FALLBACK_ORDER[3], 'imgur', 'Fourth should be imgur');
+                recordTest(suite, 'FALLBACK_ORDER is correct', true);
+            } catch (e) {
+                recordTest(suite, 'FALLBACK_ORDER is correct', false, e.message);
+            }
+
+            // Test: encodeMermaid function
+            try {
+                assert(typeof FallbackChain.encodeMermaid === 'function', 'encodeMermaid should be a function');
+                const url = FallbackChain.encodeMermaid('graph LR\n  A --> B');
+                assert(url.startsWith('https://mermaid.ink/img/pako:'), 'Should start with mermaid.ink/img/pako:');
+                recordTest(suite, 'encodeMermaid() produces valid URL', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() produces valid URL', false, e.message);
+            }
+
+            // Test: encodeMermaid URL is URL-safe
+            try {
+                const url = FallbackChain.encodeMermaid('graph LR\n  A[Start] --> B[End]');
+                const base64Part = url.replace('https://mermaid.ink/img/pako:', '');
+                assert(!base64Part.includes('+'), 'Should not contain +');
+                assert(!base64Part.includes('/'), 'Should not contain /');
+                recordTest(suite, 'encodeMermaid() produces URL-safe base64', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() produces URL-safe base64', false, e.message);
+            }
+
+            // Test: encodeMermaid handles Korean
+            try {
+                const url = FallbackChain.encodeMermaid('graph LR\n  A[Start] --> B[End]');
+                assert(url.length > 0, 'Should produce non-empty URL');
+                recordTest(suite, 'encodeMermaid() handles Korean text', true);
+            } catch (e) {
+                recordTest(suite, 'encodeMermaid() handles Korean text', false, e.message);
+            }
+
+            // Test: needsShortening function
+            try {
+                assert(typeof FallbackChain.needsShortening === 'function', 'needsShortening should be a function');
+                const shortUrl = 'https://example.com/short';
+                const longUrl = 'https://mermaid.ink/img/pako:' + 'a'.repeat(100);
+                assert(!FallbackChain.needsShortening(shortUrl), 'Short URL should not need shortening');
+                assert(FallbackChain.needsShortening(longUrl), 'Long URL should need shortening');
+                recordTest(suite, 'needsShortening() works correctly', true);
+            } catch (e) {
+                recordTest(suite, 'needsShortening() works correctly', false, e.message);
+            }
+
+            // Test: upload function exists
+            try {
+                assert(typeof FallbackChain.upload === 'function', 'upload should be a function');
+                recordTest(suite, 'upload() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'upload() method exists', false, e.message);
+            }
+
+            // Test: verifyImageUrl function exists
+            try {
+                assert(typeof FallbackChain.verifyImageUrl === 'function', 'verifyImageUrl should be a function');
+                recordTest(suite, 'verifyImageUrl() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'verifyImageUrl() method exists', false, e.message);
+            }
+        }
+
+        // Mermaid.js Integration Tests
+        async function testMermaidLibrary() {
+            const suite = 'Mermaid.js Library';
+
+            // Test: mermaid global exists
+            try {
+                assert(window.mermaid !== undefined, 'mermaid should be defined');
+                recordTest(suite, 'mermaid.js is loaded', true);
+            } catch (e) {
+                recordTest(suite, 'mermaid.js is loaded', false, e.message);
+            }
+
+            // Test: mermaid.initialize exists
+            try {
+                assert(typeof mermaid.initialize === 'function', 'mermaid.initialize should be a function');
+                recordTest(suite, 'mermaid.initialize() exists', true);
+            } catch (e) {
+                recordTest(suite, 'mermaid.initialize() exists', false, e.message);
+            }
+
+            // Test: mermaid.render exists
+            try {
+                assert(typeof mermaid.render === 'function', 'mermaid.render should be a function');
+                recordTest(suite, 'mermaid.render() exists', true);
+            } catch (e) {
+                recordTest(suite, 'mermaid.render() exists', false, e.message);
+            }
+        }
+
+        // MermaidRenderer Tests
+        async function testMermaidRendererInterface() {
+            const suite = 'MermaidRenderer';
+
+            // Test: MermaidRenderer exists
+            try {
+                assert(window.MermaidRenderer !== undefined, 'MermaidRenderer should be defined');
+                recordTest(suite, 'MermaidRenderer is defined', true);
+            } catch (e) {
+                recordTest(suite, 'MermaidRenderer is defined', false, e.message);
+                return;
+            }
+
+            // Test: init method exists and works
+            try {
+                assert(typeof MermaidRenderer.init === 'function', 'init should be a function');
+                assertNotThrows(() => MermaidRenderer.init(), 'init() should not throw');
+                assert(MermaidRenderer._initialized === true, 'Should be initialized');
+                recordTest(suite, 'init() works correctly', true);
+            } catch (e) {
+                recordTest(suite, 'init() works correctly', false, e.message);
+            }
+
+            // Test: renderToSVG method exists
+            try {
+                assert(typeof MermaidRenderer.renderToSVG === 'function', 'renderToSVG should be a function');
+                recordTest(suite, 'renderToSVG() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'renderToSVG() method exists', false, e.message);
+            }
+
+            // Test: renderToPNG method exists
+            try {
+                assert(typeof MermaidRenderer.renderToPNG === 'function', 'renderToPNG should be a function');
+                recordTest(suite, 'renderToPNG() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'renderToPNG() method exists', false, e.message);
+            }
+
+            // Test: renderToSVG produces SVG string
+            try {
+                const testCode = 'graph LR\n  A[Start] --> B[End]';
+                const svg = await MermaidRenderer.renderToSVG(testCode, 0);
+                assert(typeof svg === 'string', 'Should return string');
+                assert(svg.includes('<svg'), 'Should contain SVG element');
+                recordTest(suite, 'renderToSVG() produces valid SVG', true);
+            } catch (e) {
+                recordTest(suite, 'renderToSVG() produces valid SVG', false, e.message);
+            }
+        }
+
+        // ImageUploader Tests
+        async function testImageUploaderInterface() {
+            const suite = 'ImageUploader';
+
+            // Test: ImageUploader exists
+            try {
+                assert(window.ImageUploader !== undefined, 'ImageUploader should be defined');
+                recordTest(suite, 'ImageUploader is defined', true);
+            } catch (e) {
+                recordTest(suite, 'ImageUploader is defined', false, e.message);
+                return;
+            }
+
+            // Test: TIMEOUT_MS constant
+            try {
+                assertEqual(ImageUploader.TIMEOUT_MS, 30000, 'TIMEOUT_MS should be 30000');
+                recordTest(suite, 'TIMEOUT_MS is 30000', true);
+            } catch (e) {
+                recordTest(suite, 'TIMEOUT_MS is 30000', false, e.message);
+            }
+
+            // Test: upload method exists
+            try {
+                assert(typeof ImageUploader.upload === 'function', 'upload should be a function');
+                recordTest(suite, 'upload() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'upload() method exists', false, e.message);
+            }
+
+            // Test: getRateLimitStatus method exists
+            try {
+                assert(typeof ImageUploader.getRateLimitStatus === 'function', 'getRateLimitStatus should be a function');
+                recordTest(suite, 'getRateLimitStatus() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'getRateLimitStatus() method exists', false, e.message);
+            }
+
+            // Test: getCached method exists
+            try {
+                assert(typeof ImageUploader.getCached === 'function', 'getCached should be a function');
+                recordTest(suite, 'getCached() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'getCached() method exists', false, e.message);
+            }
+
+            // Test: hash method exists and works
+            try {
+                assert(typeof ImageUploader.hash === 'function', 'hash should be a function');
+                const hash1 = ImageUploader.hash('test code');
+                const hash2 = ImageUploader.hash('test code');
+                const hash3 = ImageUploader.hash('different code');
+                assert(typeof hash1 === 'string', 'hash should return string');
+                assert(hash1.length <= 32, 'hash should be <= 32 chars');
+                assert(hash1 === hash2, 'same input should produce same hash');
+                assert(hash1 !== hash3, 'different input should produce different hash');
+                recordTest(suite, 'hash() works correctly', true);
+            } catch (e) {
+                recordTest(suite, 'hash() works correctly', false, e.message);
+            }
+
+            // Test: _normalizeError method
+            try {
+                assert(typeof ImageUploader._normalizeError === 'function', '_normalizeError should be a function');
+                const normalized = ImageUploader._normalizeError(new Error('Request timeout'));
+                assert(normalized.includes('timeout'), 'Should handle timeout error');
+                recordTest(suite, '_normalizeError() works', true);
+            } catch (e) {
+                recordTest(suite, '_normalizeError() works', false, e.message);
+            }
+
+            // Test: uploadToPostimg method exists
+            try {
+                assert(typeof ImageUploader.uploadToPostimg === 'function', 'uploadToPostimg should be a function');
+                recordTest(suite, 'uploadToPostimg() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'uploadToPostimg() method exists', false, e.message);
+            }
+
+            // Test: uploadToFreeimage method exists
+            try {
+                assert(typeof ImageUploader.uploadToFreeimage === 'function', 'uploadToFreeimage should be a function');
+                recordTest(suite, 'uploadToFreeimage() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'uploadToFreeimage() method exists', false, e.message);
+            }
+
+            // Test: uploadToImgur method exists
+            try {
+                assert(typeof ImageUploader.uploadToImgur === 'function', 'uploadToImgur should be a function');
+                recordTest(suite, 'uploadToImgur() method exists', true);
+            } catch (e) {
+                recordTest(suite, 'uploadToImgur() method exists', false, e.message);
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            // Reset
+            testResults.pass = 0;
+            testResults.fail = 0;
+            testResults.tests = [];
+
+            await testPakoLibrary();
+            await testFallbackChain();
+            await testMermaidLibrary();
+            await testMermaidRendererInterface();
+            await testImageUploaderInterface();
+
+            renderResults();
+        }
+
+        // Demo: Render mermaid diagram using new fallback chain
+        async function runMermaidDemo() {
+            const preview = document.getElementById('mermaid-preview');
+            preview.innerHTML = '<p>Rendering...</p>';
+
+            try {
+                const testCode = `graph TD
+    A[User Input] --> B{Validate}
+    B -->|Pass| C[Process]
+    B -->|Fail| D[Error]
+    C --> E[Output]
+    D --> A`;
+
+                // Step 1: Generate mermaid.ink URL using pako
+                const mermaidInkUrl = FallbackChain.encodeMermaid(testCode);
+
+                let html = '<h3>1. mermaid.ink URL (pako compressed)</h3>';
+                html += `<div class="url-result success">
+                    <strong>URL:</strong> ${mermaidInkUrl}<br>
+                    <strong>Length:</strong> ${mermaidInkUrl.length} chars
+                    ${FallbackChain.needsShortening(mermaidInkUrl) ? ' (needs shortening)' : ' (OK)'}
+                </div>`;
+
+                // Step 2: Render SVG locally
+                const svg = await MermaidRenderer.renderToSVG(testCode, 999);
+                html += '<h3>2. Local SVG Render</h3>';
+                html += `<div style="border: 1px solid #ddd; padding: 10px; margin: 10px 0;">${svg}</div>`;
+
+                // Step 3: Show mermaid.ink image
+                html += '<h3>3. mermaid.ink Image</h3>';
+                html += `<img src="${mermaidInkUrl}" style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px;" onerror="this.alt='Failed to load'">`;
+
+                // Step 4: Test Korean text
+                const koreanCode = `graph TD
+    A[Start] --> B{Condition}
+    B -->|Yes| C[Process]
+    B -->|No| D[End]
+    C --> E[Result]`;
+
+                const koreanUrl = FallbackChain.encodeMermaid(koreanCode);
+                html += '<h3>4. Korean Text Test</h3>';
+                html += `<div class="url-result success">
+                    <strong>URL:</strong> ${koreanUrl}<br>
+                    <strong>Length:</strong> ${koreanUrl.length} chars
+                </div>`;
+                html += `<img src="${koreanUrl}" style="max-width: 100%; border: 1px solid #ddd; border-radius: 4px;" onerror="this.alt='Failed to load Korean diagram'">`;
+
+                preview.innerHTML = html;
+            } catch (e) {
+                preview.innerHTML = `<p style="color: red;">Error: ${e.message}</p>`;
+                console.error(e);
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('DOMContentLoaded', runAllTests);
+    </script>
+</body>
+</html>
