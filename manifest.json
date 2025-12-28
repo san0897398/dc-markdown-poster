@@ -1,0 +1,71 @@
+{
+    "manifest_version": 3,
+    "name": "DC Markdown Poster",
+    "version": "1.0.0",
+    "description": "디시인사이드에 마크다운과 Mermaid 다이어그램을 예쁘게 게시할 수 있는 확장 프로그램",
+    "permissions": [
+        "activeTab",
+        "storage"
+    ],
+    "host_permissions": [
+        "https://gall.dcinside.com/*",
+        "https://mermaid.ink/*",
+        "https://catbox.moe/*",
+        "https://files.catbox.moe/*"
+    ],
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup/popup.html",
+        "default_icon": {
+            "16": "assets/icons/icon16.png",
+            "48": "assets/icons/icon48.png",
+            "128": "assets/icons/icon128.png"
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://gall.dcinside.com/board/write/*",
+                "https://gall.dcinside.com/board/modify/*",
+                "https://gall.dcinside.com/mgallery/board/write/*",
+                "https://gall.dcinside.com/mgallery/board/modify/*",
+                "https://gall.dcinside.com/mini/board/write/*",
+                "https://gall.dcinside.com/mini/board/modify/*"
+            ],
+            "js": [
+                "lib/pako.min.js",
+                "lib/marked.min.js",
+                "lib/highlight.min.js",
+                "lib/highlight.min.js",
+                "utils/paste-injector.js",
+                "utils/mermaid-handler.js",
+                "utils/ascii-renderer.js",
+                "utils/style-injector.js",
+                "utils/converter.js",
+                "content/content.js"
+            ],
+            "css": [
+                "editor/editor.css"
+            ],
+            "run_at": "document_idle"
+        }
+    ],
+    "icons": {
+        "16": "assets/icons/icon16.png",
+        "48": "assets/icons/icon48.png",
+        "128": "assets/icons/icon128.png"
+    },
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "editor/*",
+                "lib/*"
+            ],
+            "matches": [
+                "https://gall.dcinside.com/*"
+            ]
+        }
+    ]
+}

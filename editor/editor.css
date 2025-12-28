@@ -1,0 +1,413 @@
+/* DC Markdown Poster - Editor Styles (Phase 8: Notion Polish) */
+
+:root {
+  /* Notion Dark (Default) */
+  --ag-bg-void: #191919;
+  --ag-bg-glass: #191919;
+  /* Solid for clean look, subtle transparency handled by overlay */
+  --ag-border: #2F2F2F;
+  --ag-accent-blue: #2EAADC;
+  /* Notion Blue */
+  --ag-text-primary: #D4D4D4;
+  --ag-text-secondary: #9B9B9B;
+  --ag-text-muted: #656565;
+  --ag-bg-hover: rgba(255, 255, 255, 0.055);
+  --ag-success: #68D391;
+  --ag-error: #FC8181;
+  --ag-font-ui: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, sans-serif;
+  --ag-font-mono: "JetBrains Mono", "Fira Code", monospace;
+}
+
+.light-theme {
+  /* Notion Light */
+  --ag-bg-void: #FFFFFF;
+  --ag-bg-glass: #FFFFFF;
+  --ag-border: #E9E9E7;
+  --ag-accent-blue: #0B6E99;
+  --ag-text-primary: #37352F;
+  --ag-text-secondary: #787774;
+  --ag-text-muted: #A4A4A4;
+  --ag-bg-hover: rgba(55, 53, 47, 0.08);
+  /* Notion hover gray */
+  --ag-success: #2E7D32;
+  --ag-error: #D32F2F;
+}
+
+/* Base Reset */
+.dc-md-editor-overlay * {
+  box-sizing: border-box;
+}
+
+/* Overlay Backdrop */
+#dc-md-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.6);
+  /* Softer backdrop */
+  backdrop-filter: blur(4px);
+  z-index: 999998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: agFadeIn 0.2s ease-out;
+}
+
+@keyframes agFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes agSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Container */
+.dc-md-container {
+  width: 90%;
+  max-width: 1200px;
+  height: 85vh;
+  max-height: 900px;
+  background: var(--ag-bg-glass);
+  border: 1px solid var(--ag-border);
+  /* Clean border */
+  border-radius: 6px;
+  /* Slightly squarer, Notion-like */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 15px 50px rgba(0, 0, 0, 0.2);
+  /* Softer shadow, less neon */
+  animation: agSlideUp 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+/* Header */
+.dc-md-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--ag-border);
+  background: var(--ag-bg-glass);
+}
+
+.dc-md-header h2 {
+  font-family: var(--ag-font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ag-text-primary);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dc-md-header h2::before {
+  content: '📝';
+  font-size: 16px;
+}
+
+.dc-md-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* Body */
+.dc-md-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  position: relative;
+  background: var(--ag-bg-void);
+  /* Ensure background fills */
+}
+
+/* Editor Pane (Centered) */
+.dc-md-editor-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--ag-bg-void);
+  border-right: none;
+  /* No separator needed */
+  max-width: 900px;
+  margin: 0 auto;
+  /* Center horizontally */
+  width: 100%;
+}
+
+/* Toolbar */
+.dc-md-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--ag-border);
+  background: var(--ag-bg-glass);
+  flex-wrap: wrap;
+  justify-content: center;
+  /* Center toolbar */
+}
+
+/* Input Area */
+#dc-md-input {
+  flex: 1;
+  width: 100%;
+  padding: 40px 60px;
+  /* More breathing room */
+  font-family: var(--ag-font-mono);
+  font-size: 15px;
+  /* Slightly larger input font */
+  line-height: 1.7;
+  color: var(--ag-text-primary);
+  background: var(--ag-bg-void);
+  border: none;
+  resize: none;
+  outline: none;
+  caret-color: var(--ag-accent-blue);
+  caret-width: 2px;
+}
+
+#dc-md-input::placeholder {
+  color: var(--ag-text-muted);
+  opacity: 0.6;
+}
+
+/* Scrollbar (Minimal) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+/* Converter Overlay (New) */
+#dc-md-converter-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(25, 25, 25, 0.85);
+  /* Dark Void Glass */
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+#dc-md-converter-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dc-md-spinner {
+  width: 50px;
+  height: 50px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: var(--ag-accent-blue);
+  border-radius: 50%;
+  animation: dcMdSpin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+.dc-md-converter-status {
+  font-family: var(--ag-font-ui);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ag-text-primary);
+  letter-spacing: -0.01em;
+  animation: dcMdPulse 2s ease-in-out infinite;
+}
+
+@keyframes dcMdSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dcMdPulse {
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Footer */
+.dc-md-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Center footer inputs */
+  padding: 12px 20px;
+  border-top: 1px solid var(--ag-border);
+  background: var(--ag-bg-glass);
+  gap: 20px;
+}
+
+.dc-md-footer-info {
+  display: none;
+  /* Hide status text for cleaner look */
+}
+
+/* Action Buttons (Flat & Clean) */
+.dc-md-btn-primary {
+  padding: 10px 24px;
+  /* Larger CTA */
+  font-family: var(--ag-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ag-accent-blue);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.dc-md-btn-primary:hover {
+  background: #0081C4;
+  /* Darker Blue */
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(46, 170, 220, 0.3);
+  /* Glow */
+}
+
+.dc-md-btn-secondary {
+  padding: 10px 18px;
+  font-family: var(--ag-font-ui);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ag-text-secondary);
+  background: transparent;
+  border: 1px solid var(--ag-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dc-md-btn-secondary:hover {
+  background: var(--ag-bg-hover);
+  color: var(--ag-text-primary);
+}
+
+.dc-md-btn-close {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ag-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.dc-md-btn-close:hover {
+  background: var(--ag-bg-hover);
+  color: var(--ag-error);
+}
+
+/* Floating FAB (Refined) */
+#dc-md-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  padding: 12px 20px;
+  font-family: var(--ag-font-ui);
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: #191919;
+  border: 1px solid #333;
+  border-radius: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#dc-md-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Toast */
+.dc-md-toast {
+  position: fixed;
+  bottom: 80px;
+  right: 24px;
+  z-index: 999999;
+  padding: 12px 20px;
+  background: #191919;
+  color: #fff;
+  border: 1px solid #333;
+  border-radius: 6px;
+  font-family: var(--ag-font-ui);
+  font-size: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: dcMdToastIn 0.3s cubic-bezier(0.2, 0, 0.2, 1);
+}
+
+@keyframes dcMdToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dcMdToastOut {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
