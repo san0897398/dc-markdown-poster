@@ -75,6 +75,19 @@
 
 ### 아키텍처 개요
 
+```mermaid
+graph TB
+    A[마크다운 입력] --> B[Content Script]
+    B --> C{Mermaid 블록?}
+    C -->|Yes| D[Background Worker]
+    C -->|No| E[HTML 변환]
+    D --> F[mermaid.ink 렌더링]
+    F --> G[Catbox 업로드]
+    G --> H[이미지 삽입]
+    E --> I[DC 에디터에 삽입]
+    H --> I
+```
+
 Content Script에서 마크다운을 HTML로 변환하고, Mermaid 다이어그램은 Background Service Worker를 통해 mermaid.ink에서 이미지로 렌더링한 후 Catbox.moe에 업로드합니다.
 
 ---
@@ -84,6 +97,20 @@ Content Script에서 마크다운을 HTML로 변환하고, Mermaid 다이어그�
 디시인사이드는 외부 이미지 URL을 직접 삽입할 수 없고, 반드시 자체 서버에 업로드해야 합니다.
 
 해결책: 사용자가 이미지를 붙여넣기할 때 Summernote 에디터가 자동으로 업로드하는 동작을 역이용!
+
+```mermaid
+sequenceDiagram
+    participant Ext as 확장 프로그램
+    participant Editor as Summernote 에디터
+    participant DC as DC 서버
+
+    Ext->>Ext: Blob을 File로 변환
+    Ext->>Ext: DataTransfer 생성
+    Ext->>Ext: ClipboardEvent 생성
+    Ext->>Editor: paste 이벤트 발사
+    Editor->>DC: 이미지 자동 업로드
+    DC-->>Editor: 업로드 완료
+```
 
 1. Blob을 File 객체로 변환
 2. DataTransfer 객체 생성 (클립보드 시뮬레이션)
