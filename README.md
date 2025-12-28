@@ -76,24 +76,21 @@
 
 **코드 블록 (구문 강조)**
 
-```text
-｀｀｀javascript
-function hello() {
-    console.log('Hello, DC!');
-}
-｀｀｀
-```
+세 개의 백틱과 언어명으로 코드 블록을 작성합니다.
+
+예: (백틱)(백틱)(백틱)javascript ... (백틱)(백틱)(백틱)
 
 **Mermaid 다이어그램**
 
-```text
-｀｀｀mermaid
-graph LR
-    A[시작] --> B{조건}
-    B -->|Yes| C[처리]
-    B -->|No| D[종료]
-｀｀｀
-```
+세 개의 백틱과 mermaid로 다이어그램을 작성합니다.
+
+예: (백틱)(백틱)(백틱)mermaid ... (백틱)(백틱)(백틱)
+
+**렌더링 결과:**
+
+![Flowchart 예시](https://mermaid.ink/img/pako:eNqrVkrOT0lVslJKL0osyFAIcYnJUwACx-g3TWvezFr5Zt4EhTfzWl8vWBqroKtrp-BU_WbOgrezVrxp2ajwalMDUFEtRIMTSLrmbdvWV5v31Cg4R7s4KbxZ0PBm3tJYZPk33Uve9qyoUXCJfjN9wuv5axTeTpzzpnsOVI0z2ArX6DczW14v7olV0lHKTS3KTcxMUbKqVirJSM0FuTMlNS2xNKdEqbYWAGW-UKg=)
+
+![Sequence 예시](https://mermaid.ink/img/pako:eNqrVkrOT0lVslIqTi0sTc1LTnXJTEwvSsyNyVMAgjdNa97MWvlm3gRdO7s3LXNeb2qxUni9cM6r7TvezN2h8GbWlDeb1kJVgmWBylycrBSAkm-WzVV4O3MqkAWRd3HSRTLj1aYNrzbvQdEJkoXZZqXwtm3B28YNCq83zHm1o1NJRyk3tSg3MTNFyapaqSQjNRfk4JTUtMTSnBKl2loAIIpdPg==)
 
 **테이블**
 
